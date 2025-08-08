@@ -2,7 +2,7 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('svelte').Config} */
 const config = {
-  preprocess: vitePreprocess(),
+  preprocess: vitePreprocess()
 };
 
-export default config;
+export default config; 

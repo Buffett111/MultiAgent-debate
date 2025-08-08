@@ -17,30 +17,30 @@ export interface ChatMessage {
  */
 export async function callOpenAI(messages: ChatMessage[]): Promise<string | null> {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-  if (!apiKey) return null;
-  const prompt = messages.map(m => `${m.role}: ${m.content}`).join('\n');
+  if (!apiKey) {
+    console.error('OpenAI API key (VITE_OPENAI_API_KEY) is missing');
+    return null;
+  }
   try {
-    const res = await fetch('https://api.openai.com/v1/responses', {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-        'OpenAI-Beta': 'reasoning=2'
+        Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'o3-mini',
-        reasoning: { effort: 'medium' },
-        input: prompt,
-        max_output_tokens: 512,
-        temperature: 0.7
+        model: 'gpt-4o',
+        temperature: 0.7,
+        max_tokens: 512,
+        messages
       })
     });
     if (!res.ok) {
-      console.warn('OpenAI API error', await res.text());
+      console.warn('OpenAI Chat Completions API error', res.status, await res.text());
       return null;
     }
     const data = await res.json();
-    const content = data?.output?.[0]?.content?.[0]?.text as string | undefined;
+    const content = data?.choices?.[0]?.message?.content as string | undefined;
     return content ?? null;
   } catch (err) {
     console.error('OpenAI API error', err);
@@ -142,10 +142,14 @@ export async function callOpenRouter(
 ): Promise<string | null> {
   const apiKey =
     import.meta.env.VITE_OPENROUTER_API_KEY || import.meta.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.error('OpenRouter API key (VITE_OPENROUTER_API_KEY) is missing');
+    return null;
+  }
   const url = 'https://openrouter.ai/api/v1/chat/completions';
   const body = {
-    model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1:free',
+    // Prefer a widely available free-tier model
+    model: 'meta-llama/llama-3.1-8b-instruct:free',
     messages
   };
   try {
@@ -153,19 +157,52 @@ export async function callOpenRouter(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://example.com', // optional
-        'X-Title': 'MultiAgent Debate' // optional
+        Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify(body)
     });
     if (!res.ok) {
-      console.warn('OpenRouter API error', await res.text());
+      const errorText = await res.text();
+      console.warn('OpenRouter API error', res.status, errorText);
+      // If model not found, retry with auto router
+      if (res.status === 404) {
+        const autoRes = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({ model: 'openrouter/auto', messages })
+        });
+        if (!autoRes.ok) {
+          console.warn('OpenRouter auto route error', autoRes.status, await autoRes.text());
+          return null;
+        }
+        const autoData = await autoRes.json();
+        const autoRaw = autoData?.choices?.[0]?.message?.content as unknown;
+        return typeof autoRaw === 'string' ? autoRaw : Array.isArray(autoRaw)
+          ? autoRaw.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim() || null
+          : null;
+      }
       return null;
     }
     const data = await res.json();
-    const content = data?.choices?.[0]?.message?.content as string | undefined;
-    return content ?? null;
+    const rawContent = data?.choices?.[0]?.message?.content as unknown;
+    let content: string | null = null;
+    if (Array.isArray(rawContent)) {
+      content = rawContent
+        .map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
+        .join('\n')
+        .trim();
+      if (content.length === 0) content = null;
+    } else if (typeof rawContent === 'string') {
+      content = rawContent;
+    }
+    if (!content) {
+      console.warn('OpenRouter API returned empty content shape', data);
+      return null;
+    }
+    return content;
   } catch (err) {
     console.error('OpenRouter API error', err);
     return null;

@@ -158,18 +158,29 @@
 <div class="container">
   <h1>多 AI 交叉辯論聊天系統</h1>
   <div>
-    <label>選擇模型：</label>
-    {#each availableModels as model}
-      <label style="margin-right: 1rem;">
-        <input type="checkbox" bind:group={selectedModels} value={model.id} />
-        {model.name}
-      </label>
-    {/each}
+    <fieldset style="border: 0; padding: 0; margin: 0;">
+      <legend>選擇模型：</legend>
+      {#each availableModels as model}
+        <label style="margin-right: 1rem;">
+          <input type="checkbox" bind:group={selectedModels} value={model.id} />
+          {model.name}
+        </label>
+      {/each}
+    </fieldset>
   </div>
   <div style="margin-top: 0.5rem;">
     <label for="maxRounds">最多辯論回合：</label>
     <input id="maxRounds" type="number" bind:value={maxRounds} min="1" max="10" style="width: 60px;" />
   </div>
+  {#if !import.meta.env.VITE_OPENAI_API_KEY || !import.meta.env.VITE_GEMINI_API_KEY || !import.meta.env.VITE_OPENROUTER_API_KEY}
+    <div style="margin-top: 0.5rem; padding: 0.5rem; background: #fff4e5; border: 1px solid #ffc107; border-radius: 4px; color: #7a5c00;">
+      缺少 API 金鑰：
+      {#if !import.meta.env.VITE_OPENAI_API_KEY}<span>OpenAI </span>{/if}
+      {#if !import.meta.env.VITE_GEMINI_API_KEY}<span>Gemini </span>{/if}
+      {#if !import.meta.env.VITE_OPENROUTER_API_KEY}<span>OpenRouter </span>{/if}
+      （請於專案根目錄新增 .env 並設定對應的 VITE_*_API_KEY）
+    </div>
+  {/if}
   <div style="margin-top: 0.5rem;">
     <textarea rows="4" placeholder="請輸入您的問題" bind:value={question} style="width: 100%;"></textarea>
   </div>
