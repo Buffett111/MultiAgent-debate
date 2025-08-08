@@ -11,7 +11,7 @@ export interface ChatMessage {
 }
 
 /**
- * Call OpenAI's reasoning model o3-mini via the Responses API.
+ * Call OpenAI's GPT-4o reasoning model (o3-mini) via the Responses API.
  * Accepts an array of message objects and returns the assistant's reply.
  * If the API key is missing or the request fails, returns null.
  */

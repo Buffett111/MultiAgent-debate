@@ -22,7 +22,7 @@
 
   // 可用模型列表
   const availableModels: ModelOption[] = [
-    { id: 'o3-mini', name: 'OpenAI o3-mini reasoning' },
+    { id: 'o3-mini', name: 'OpenAI GPT-4o reasoning (o3-mini)' },
     { id: 'gemini', name: 'Gemini 2.5 Pro (Google)' },
     { id: 'claude', name: 'Claude 3 (Anthropic)' },
     { id: 'openrouter', name: 'OpenRouter Llama 3.1 Free' }
