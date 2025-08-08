@@ -1,58 +1,79 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
+  import {
+    callOpenAI,
+    callGemini,
+    callAnthropic,
+    callOpenRouter,
+    type ChatMessage
+  } from './api';
+
+  interface ModelOption {
+    id: string;
+    name: string;
+  }
+
+  interface HistoryItem {
+    round: number;
+    modelId: string;
+    thought: string;
+    answer: string;
+  }
 
   // 可用模型列表
-  const availableModels = [
-    { id: 'gpt4o', name: 'GPT‑4o (OpenAI)' },
-    { id: 'gemini', name: 'Gemini 2.5 Pro (Google)' },
-    { id: 'claude', name: 'Claude 3 (Anthropic)' }
+  const availableModels: ModelOption[] = [
+    { id: 'o3-mini', name: 'OpenAI GPT-4o reasoning (o3-mini)' },
+    { id: 'gemini', name: 'Gemini 2.5 Pro (Google)' },
+    { id: 'claude', name: 'Claude 3 (Anthropic)' },
+    { id: 'openrouter', name: 'OpenRouter Llama 3.1 Free' }
   ];
 
   // 狀態變數
-  let selectedModels = ['gpt4o', 'gemini'];
+  let selectedModels: string[] = ['o3-mini', 'gemini', 'openrouter'];
   let question = '';
   let maxRounds = 3;
   let isDebating = false;
-  let chatHistory = [];
+  let chatHistory: HistoryItem[] = [];
 
   // 從 localStorage 載入現有聊天紀錄
   onMount(() => {
     const stored = localStorage.getItem('multiAgentChat');
     if (stored) {
-      chatHistory = JSON.parse(stored);
+      chatHistory = JSON.parse(stored) as HistoryItem[];
     }
   });
-
-  // 引入調用各模型 API 的工具函式
-  import { callOpenAI, callGemini, callAnthropic } from './api.js';
 
   /**
    * 取得指定模型的推理與回答。
    * 根據模型 ID 呼叫對應的 API，如果調用成功，解析格式化的回覆；
    * 否則回傳錯誤訊息。
-   *
-   * @param {string} modelId 模型代號
-   * @param {string} question 使用者的問題
-   * @param {number} round 回合數，用於提示中加入回合資訊
-   * @returns {Promise<{thought: string, answer: string}>}
    */
-  async function getAgentResponse(modelId, question, round) {
+  async function getAgentResponse(
+    modelId: string,
+    question: string,
+    round: number
+  ): Promise<{ thought: string; answer: string }> {
     const modelName = availableModels.find(m => m.id === modelId)?.name || modelId;
     // 提示模型逐步推理，並要求以指定格式回覆
     const prompt = `請以繁體中文回答下列問題，並逐步思考；回覆時使用兩行顯示：\n思考過程：<你的思考過程>\n答案：<最終答案>\n問題：${question}`;
-    let rawResponse = null;
-    if (modelId === 'gpt4o') {
+    let rawResponse: string | null = null;
+    if (modelId === 'o3-mini') {
       rawResponse = await callOpenAI([
         { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
         { role: 'user', content: prompt }
-      ]);
+      ] as ChatMessage[]);
     } else if (modelId === 'gemini') {
       rawResponse = await callGemini(prompt);
     } else if (modelId === 'claude') {
       rawResponse = await callAnthropic([
         { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
         { role: 'user', content: prompt }
-      ]);
+      ] as ChatMessage[]);
+    } else if (modelId === 'openrouter') {
+      rawResponse = await callOpenRouter([
+        { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
+        { role: 'user', content: prompt }
+      ] as ChatMessage[]);
     }
     // 解析回覆成「思考過程」與「答案」
     if (rawResponse) {
