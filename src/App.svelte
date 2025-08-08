@@ -23,16 +23,53 @@
     }
   });
 
-  // 模擬代理模型的思考與回答
-  async function simulateAgentResponse(modelId, question, round, context) {
-    // 在實際專案中，這裡會調用外部 API
-    // 我們暫用固定文本模擬不同模型的推理過程和答案
+  // 引入調用各模型 API 的工具函式
+  import { callOpenAI, callGemini, callAnthropic } from './api.js';
+
+  /**
+   * 取得指定模型的推理與回答。
+   * 根據模型 ID 呼叫對應的 API，如果調用成功，解析格式化的回覆；
+   * 否則回傳錯誤訊息。
+   *
+   * @param {string} modelId 模型代號
+   * @param {string} question 使用者的問題
+   * @param {number} round 回合數，用於提示中加入回合資訊
+   * @returns {Promise<{thought: string, answer: string}>}
+   */
+  async function getAgentResponse(modelId, question, round) {
     const modelName = availableModels.find(m => m.id === modelId)?.name || modelId;
-    const thought = `（${modelName} 第 ${round} 輪推理）我將問題分解為幾個步驟並逐步思考…`;
-    const answer = `（${modelName} 最終答覆）根據我的推理，初步答案為 ${Math.floor(Math.random() * 100)}。`;
-    // 模擬延遲
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return { thought, answer };
+    // 提示模型逐步推理，並要求以指定格式回覆
+    const prompt = `請以繁體中文回答下列問題，並逐步思考；回覆時使用兩行顯示：\n思考過程：<你的思考過程>\n答案：<最終答案>\n問題：${question}`;
+    let rawResponse = null;
+    if (modelId === 'gpt4o') {
+      rawResponse = await callOpenAI([
+        { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
+        { role: 'user', content: prompt }
+      ]);
+    } else if (modelId === 'gemini') {
+      rawResponse = await callGemini(prompt);
+    } else if (modelId === 'claude') {
+      rawResponse = await callAnthropic([
+        { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
+        { role: 'user', content: prompt }
+      ]);
+    }
+    // 解析回覆成「思考過程」與「答案」
+    if (rawResponse) {
+      const parts = rawResponse.split('答案：');
+      if (parts.length === 2) {
+        const thoughtPart = parts[0].replace(/^[\n\s]*思考過程：/u, '').trim();
+        const answerPart = parts[1].trim();
+        return { thought: thoughtPart, answer: answerPart };
+      }
+      // 若格式不符，將整段視為答案
+      return { thought: '', answer: rawResponse.trim() };
+    }
+    // API 回傳 null 時顯示錯誤訊息
+    return {
+      thought: `（${modelName} 第 ${round} 輪推理）無法取得回覆，請檢查 API 金鑰或網路。`,
+      answer: `（${modelName} 最終答覆）無法取得回覆。`
+    };
   }
 
   // 開始辯論
@@ -40,10 +77,9 @@
     if (!question.trim() || selectedModels.length === 0) return;
     isDebating = true;
     chatHistory = [];
-    let context = {};
     for (let round = 1; round <= maxRounds; round++) {
       for (const modelId of selectedModels) {
-        const { thought, answer } = await simulateAgentResponse(modelId, question, round, context);
+        const { thought, answer } = await getAgentResponse(modelId, question, round);
         chatHistory.push({ round, modelId, thought, answer });
         // 更新 localStorage
         localStorage.setItem('multiAgentChat', JSON.stringify(chatHistory));
