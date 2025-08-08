@@ -22,6 +22,7 @@
 
   // 可用模型列表
   const availableModels: ModelOption[] = [
+
     { id: 'o3-mini', name: 'OpenAI GPT-4o reasoning (o3-mini)' },
     { id: 'gemini', name: 'Gemini 2.5 Pro (Google)' },
     { id: 'claude', name: 'Claude 3 (Anthropic)' },
@@ -30,6 +31,7 @@
 
   // 狀態變數
   let selectedModels: string[] = ['o3-mini', 'gemini', 'openrouter'];
+
   let question = '';
   let maxRounds = 3;
   let isDebating = false;
@@ -58,6 +60,7 @@
     const prompt = `請以繁體中文回答下列問題，並逐步思考；回覆時使用兩行顯示：\n思考過程：<你的思考過程>\n答案：<最終答案>\n問題：${question}`;
     let rawResponse: string | null = null;
     if (modelId === 'o3-mini') {
+
       rawResponse = await callOpenAI([
         { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
         { role: 'user', content: prompt }
@@ -74,6 +77,7 @@
         { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
         { role: 'user', content: prompt }
       ] as ChatMessage[]);
+
     }
     // 解析回覆成「思考過程」與「答案」
     if (rawResponse) {
