@@ -1,7 +1,8 @@
 // API utility functions for calling different LLM providers.
 // These functions read API keys from Vite's environment variables. Users need
 // to create a `.env` file at the project root with the variables
-// `VITE_OPENAI_API_KEY`, `VITE_GEMINI_API_KEY` and `VITE_ANTHROPIC_API_KEY`.
+// `VITE_OPENAI_API_KEY`, `VITE_GEMINI_API_KEY`, `VITE_ANTHROPIC_API_KEY` and
+// `VITE_OPENROUTER_API_KEY`.
 // See the README or documentation for details.
 
 export interface ChatMessage {
@@ -10,7 +11,7 @@ export interface ChatMessage {
 }
 
 /**
- * Call OpenAI's reasoning model o3-mini via the Responses API.
+ * Call OpenAI's GPT-4o reasoning model (o3-mini) via the Responses API.
  * Accepts an array of message objects and returns the assistant's reply.
  * If the API key is missing or the request fails, returns null.
  */
@@ -123,6 +124,50 @@ export async function callAnthropic(
     return content ?? null;
   } catch (err) {
     console.error('Anthropic API error', err);
+    return null;
+  }
+}
+
+/**
+ * Call the OpenRouter API using the free Llama‑3.1‑Nemotron‑Ultra‑253B‑v1 model,
+ * which is derived from Meta's Llama‑3.1‑405B‑Instruct via neural architecture
+ * search. The model is optimized for advanced reasoning, interactive chat,
+ * retrieval‑augmented generation, and tool use, supporting up to 128K tokens of
+ * context. Include a system prompt requesting detailed step‑by‑step thinking to
+ * fully activate its reasoning capabilities. Accepts an array of message
+ * objects and returns the assistant's reply.
+ */
+export async function callOpenRouter(
+  messages: ChatMessage[]
+): Promise<string | null> {
+  const apiKey =
+    import.meta.env.VITE_OPENROUTER_API_KEY || import.meta.env.OPENROUTER_API_KEY;
+  if (!apiKey) return null;
+  const url = 'https://openrouter.ai/api/v1/chat/completions';
+  const body = {
+    model: 'nvidia/llama-3.1-nemotron-ultra-253b-v1:free',
+    messages
+  };
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://example.com', // optional
+        'X-Title': 'MultiAgent Debate' // optional
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      console.warn('OpenRouter API error', await res.text());
+      return null;
+    }
+    const data = await res.json();
+    const content = data?.choices?.[0]?.message?.content as string | undefined;
+    return content ?? null;
+  } catch (err) {
+    console.error('OpenRouter API error', err);
     return null;
   }
 }

@@ -1,6 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { callOpenAI, callGemini, callAnthropic, type ChatMessage } from './api';
+  import {
+    callOpenAI,
+    callGemini,
+    callAnthropic,
+    callOpenRouter,
+    type ChatMessage
+  } from './api';
 
   interface ModelOption {
     id: string;
@@ -16,13 +22,16 @@
 
   // 可用模型列表
   const availableModels: ModelOption[] = [
-    { id: 'o3', name: 'GPT o3 (OpenAI)' },
+
+    { id: 'o3-mini', name: 'OpenAI GPT-4o reasoning (o3-mini)' },
     { id: 'gemini', name: 'Gemini 2.5 Pro (Google)' },
-    { id: 'claude', name: 'Claude 3 (Anthropic)' }
+    { id: 'claude', name: 'Claude 3 (Anthropic)' },
+    { id: 'openrouter', name: 'OpenRouter Llama 3.1 Free' }
   ];
 
   // 狀態變數
-  let selectedModels: string[] = ['o3', 'gemini'];
+  let selectedModels: string[] = ['o3-mini', 'gemini', 'openrouter'];
+
   let question = '';
   let maxRounds = 3;
   let isDebating = false;
@@ -50,7 +59,8 @@
     // 提示模型逐步推理，並要求以指定格式回覆
     const prompt = `請以繁體中文回答下列問題，並逐步思考；回覆時使用兩行顯示：\n思考過程：<你的思考過程>\n答案：<最終答案>\n問題：${question}`;
     let rawResponse: string | null = null;
-    if (modelId === 'o3') {
+    if (modelId === 'o3-mini') {
+
       rawResponse = await callOpenAI([
         { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
         { role: 'user', content: prompt }
@@ -62,6 +72,12 @@
         { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
         { role: 'user', content: prompt }
       ] as ChatMessage[]);
+    } else if (modelId === 'openrouter') {
+      rawResponse = await callOpenRouter([
+        { role: 'system', content: '你是一個樂於助人的 AI，需要逐步思考並在回覆中附上思考過程和最終答案。' },
+        { role: 'user', content: prompt }
+      ] as ChatMessage[]);
+
     }
     // 解析回覆成「思考過程」與「答案」
     if (rawResponse) {
