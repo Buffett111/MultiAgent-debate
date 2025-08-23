@@ -10,3 +10,14 @@ declare global {
 }
 
 export {}; 
+
+// Svelte action typing for our custom markdown action
+declare namespace svelteHTML {
+  interface HTMLAttributes<T> {
+    'use:renderMarkdown'?: string;
+  }
+}
+
+// Module declarations to satisfy TypeScript for runtime-only imports
+declare module 'marked';
+declare module 'dompurify';

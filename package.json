@@ -15,5 +15,9 @@
     "@tsconfig/svelte": "^5.0.0",
     "vite": "^4.0.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "dompurify": "^3.1.6",
+    "marked": "^12.0.2",
+    "openai": "^4.56.0"
+  }
 }
